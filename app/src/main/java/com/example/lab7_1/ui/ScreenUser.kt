@@ -2,7 +2,6 @@ package com.example.lab7_1.ui
 
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
@@ -25,8 +23,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ScreenUser() {
     val context = LocalContext.current
-    var db: UserDatabase by remember { mutableStateOf(UserDatabase.getDatabase(context)) }
-    var id by remember { mutableStateOf("") }
+    val db = remember { UserDatabase.getDatabase(context) }
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
     var dataUser by remember { mutableStateOf("") }
@@ -39,17 +36,7 @@ fun ScreenUser() {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Spacer(Modifier.height(50.dp))
-        TextField(
-            value = id,
-            onValueChange = { id = it },
-            label = { Text("ID (solo lectura)") },
-            readOnly = true,
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(Modifier.height(8.dp))
-        TextField(
+        OutlinedTextField(
             value = firstName,
             onValueChange = { firstName = it },
             label = { Text("First Name: ") },
@@ -57,7 +44,7 @@ fun ScreenUser() {
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(8.dp))
-        TextField(
+        OutlinedTextField(
             value = lastName,
             onValueChange = { lastName = it },
             label = { Text("Last Name:") },
@@ -69,12 +56,12 @@ fun ScreenUser() {
             onClick = {
                 val user = User(firstName = firstName, lastName = lastName)
                 coroutineScope.launch {
-                    AgregarUsuario(user = user, dao = dao)
+                    dao.insert(user)
+                    firstName = ""
+                    lastName = ""
                 }
-                firstName = ""
-                lastName = ""
             },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text("Agregar Usuario", fontSize = 16.sp)
         }
@@ -82,13 +69,24 @@ fun ScreenUser() {
         Button(
             onClick = {
                 coroutineScope.launch {
-                    val data = getUsers(dao = dao)
-                    dataUser = data
+                    dataUser = getUsers(dao)
                 }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Listar Usuarios", fontSize = 16.sp)
+        }
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = {
+                coroutineScope.launch {
+                    dao.deleteLastUser()
+                    dataUser = getUsers(dao)
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Eliminar Último Usuario", fontSize = 16.sp)
         }
         Spacer(Modifier.height(16.dp))
         Text(
@@ -102,16 +100,7 @@ suspend fun getUsers(dao: UserDao): String {
     var rpta = ""
     val users = dao.getAll()
     users.forEach { user ->
-        val fila = "${user.firstName} - ${user.lastName}\n"
-        rpta += fila
+        rpta += "${user.firstName} - ${user.lastName}\n"
     }
     return rpta
-}
-
-suspend fun AgregarUsuario(user: User, dao: UserDao) {
-    try {
-        dao.insert(user)
-    } catch (e: Exception) {
-        android.util.Log.e("User", "Error: insert: ${e.message}")
-    }
 }
